@@ -3,7 +3,7 @@
 	<parent>
 		<artifactId>contentconnector</artifactId>
 		<groupId>com.gentics</groupId>
-		<version>1.12.7-SNAPSHOT</version>
+		<version>1.12.8-SNAPSHOT</version>
 	</parent>
 	<artifactId>contentconnector-lucene-autocomplete</artifactId>
 	<properties>
@@ -52,26 +52,28 @@
 	</build>
 	<dependencies>
 		<dependency>
+			<!-- LICENSE: Apache 2.0 -->
 			<groupId>log4j</groupId>
 			<artifactId>log4j</artifactId>
 			<version>1.2.16</version>
 		</dependency>
-
 		<dependency>
+			<!-- LICENSE: Apache 2.0 -->
 			<groupId>com.gentics</groupId>
 			<artifactId>contentconnector-core</artifactId>
 			<version>${project.version}</version>
 		</dependency>
 		<dependency>
+			<!-- LICENSE: Apache 2.0 -->
 			<groupId>com.gentics</groupId>
 			<artifactId>contentconnector-lucene</artifactId>
 			<version>${project.version}</version>
 		</dependency>
 		<dependency>
+			<!-- LICENSE: Apache 2.0 -->
 			<groupId>org.apache.lucene</groupId>
 			<artifactId>lucene-spellchecker</artifactId>
 			<version>${lucene.version}</version>
 		</dependency>
-
 	</dependencies>
 </project>
