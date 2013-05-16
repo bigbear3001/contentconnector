@@ -122,6 +122,14 @@ public class CRQueryParser extends QueryParser {
 		return newQuery.toString();
 	}
 
+	/**
+	 * helper method to replace {@link #SPEZIAL_CHARACTERS} in attribute and correcting for wildcards
+	 * @param charsBeforeValue - string before the value string (nothing replaced in here)
+	 * @param valueWithAttribute - value and attributename in the form attribute:value
+	 * @param attribute - attributename for easier replacing
+	 * @param charsAfterValue - string after the value (nothing replaced here)
+	 * @return charsBeforeValue + replaced valueWithAttribute + charsAfterValue
+	 */
 	protected String replaceSpecialCharactersInAttribute(final String charsBeforeValue,
 			final String valueWithAttribute, final String attribute, final String charsAfterValue) {
 		//remove spezial characters immediatly after or before wildcards as they would result in queryies like attribute:query +attribute:*
