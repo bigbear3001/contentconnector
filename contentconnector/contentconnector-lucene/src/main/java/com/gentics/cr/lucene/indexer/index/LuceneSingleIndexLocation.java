@@ -148,8 +148,8 @@ public class LuceneSingleIndexLocation extends LuceneIndexLocation implements Ta
 
 	/**
 	 * Returns the path of the index location.
-     * @return path of the index location
-     */
+	 * @return path of the index location
+	 */
 	public final String getIndexLocation() {
 		return this.indexLocation;
 	}
@@ -237,27 +237,6 @@ public class LuceneSingleIndexLocation extends LuceneIndexLocation implements Ta
 				return new Date(0);
 			}
 		}
-	}
-
-	/**
-	 * Checks if the index is optimized.
-	 * @return true if it is optimized
-	 */
-	@Override
-	public final boolean isOptimized() {
-		boolean ret = false;
-		IndexAccessor indexAccessor = this.getAccessor();
-		IndexReader reader = null;
-		try {
-			reader = indexAccessor.getReader(false);
-			ret = reader.isOptimized();
-		} catch (IOException ex) {
-			log.error("IOException happened during test of index. ", ex);
-		} finally {
-			indexAccessor.release(reader, false);
-		}
-
-		return ret;
 	}
 
 	@Override
