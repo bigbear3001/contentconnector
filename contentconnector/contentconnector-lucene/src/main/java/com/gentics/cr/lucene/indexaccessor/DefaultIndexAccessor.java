@@ -60,7 +60,7 @@ class DefaultIndexAccessor implements IndexAccessor {
 		 * Counter for naming the threads
 		 */
 		private int i = 0;
-		
+
 		/**
 		 * Base pool name
 		 */
@@ -119,7 +119,9 @@ class DefaultIndexAccessor implements IndexAccessor {
 
 	protected int readingReaderUseCount = 0;
 
-	protected ExecutorService pool = Executors.newFixedThreadPool(POOL_SIZE, new NamedThreadFactory(DefaultIndexAccessor.class.getSimpleName()));
+	protected ExecutorService pool = Executors.newFixedThreadPool(
+		POOL_SIZE,
+		new NamedThreadFactory(DefaultIndexAccessor.class.getSimpleName()));
 
 	protected int numReopening = 0;
 
@@ -676,6 +678,7 @@ class DefaultIndexAccessor implements IndexAccessor {
 		IndexReader oldReader = cachedReadingReader;
 		try {
 			cachedReadingReader = cachedReadingReader.reopen();
+			//			cachedReadingReader = IndexReader.openIfChanged(oldReader);
 			if (oldReader != cachedReadingReader) {
 				oldReader.close();
 			}
