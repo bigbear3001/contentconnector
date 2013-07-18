@@ -53,23 +53,23 @@ class DefaultIndexAccessor implements IndexAccessor {
 	public static final String CONFIG_WRITE_LOCK_TIMEOUT_KEY = "writeLockTimeout";
 
 	/**
-	 * Creates Threads starting with a certain name
+	 * Creates Threads starting with a certain name.
 	 * @author bigbear3001
 	 *
 	 */
 	private static final class NamedThreadFactory implements ThreadFactory {
 		/**
-		 * Counter for naming the threads
+		 * Counter for naming the threads.
 		 */
 		private int i = 0;
-		
+
 		/**
-		 * Base pool name
+		 * Base pool name.
 		 */
 		private String poolName;
 
 		/**
-		 * Created a new thread factory that creates a named thread pool
+		 * Created a new thread factory that creates a named thread pool.
 		 * @param name
 		 */
 		public NamedThreadFactory(final String name) {
@@ -98,7 +98,7 @@ class DefaultIndexAccessor implements IndexAccessor {
 	private static final Logger LOGGER = Logger.getLogger(DefaultIndexAccessor.class);
 
 	/**
-	 * Pool size for handling threads
+	 * Pool size for handling threads.
 	 */
 	private static final int POOL_SIZE = 2;
 
@@ -121,7 +121,9 @@ class DefaultIndexAccessor implements IndexAccessor {
 
 	protected int readingReaderUseCount = 0;
 
-	protected ExecutorService pool = Executors.newFixedThreadPool(POOL_SIZE, new NamedThreadFactory(DefaultIndexAccessor.class.getSimpleName()));
+	protected ExecutorService pool = Executors.newFixedThreadPool(
+		POOL_SIZE,
+		new NamedThreadFactory(DefaultIndexAccessor.class.getSimpleName()));
 
 	protected int numReopening = 0;
 
@@ -134,7 +136,7 @@ class DefaultIndexAccessor implements IndexAccessor {
 
 	protected int writerUseCount = 0;
 
-	protected int numSearchersForRetirment = 0;
+	protected int numSearchersForRetirement = 0;
 
 	protected List<IndexSearcher> createdSearchers = new CopyOnWriteArrayList<IndexSearcher>();
 
@@ -323,7 +325,7 @@ class DefaultIndexAccessor implements IndexAccessor {
 				IndexReader reader = searcher.getIndexReader();
 				IndexSearcher oldSearcher = searcher;
 				IndexReader newReader = reader.reopen();
-				if (newReader != reader) {
+				if (!newReader.equals(reader)) {
 					searcher = new IndexSearcher(newReader);
 					searcher.setSimilarity(oldSearcher.getSimilarity());
 					oldSearcher.getIndexReader().close();
@@ -420,7 +422,7 @@ class DefaultIndexAccessor implements IndexAccessor {
 			if (config != null) {
 				writerConfig.setWriteLockTimeout(config.getInteger(CONFIG_WRITE_LOCK_TIMEOUT_KEY, 1000));
 				MergePolicy merge = writerConfig.getMergePolicy();
-				if(merge instanceof LogMergePolicy) {
+				if (merge instanceof LogMergePolicy) {
 					((LogMergePolicy) merge).setMergeFactor(300);
 				}
 			}
@@ -522,7 +524,7 @@ class DefaultIndexAccessor implements IndexAccessor {
 	public synchronized void release(final IndexWriter writer) {
 
 		try {
-			if (writer != cachedWriter) {
+			if (!writer.equals(cachedWriter)) {
 				throw new IllegalArgumentException("writer not opened by this index accessor");
 			}
 			writerUseCount--;
@@ -585,7 +587,7 @@ class DefaultIndexAccessor implements IndexAccessor {
 			return;
 		}
 
-		if (reader != cachedReadingReader) {
+		if (!reader.equals(cachedReadingReader)) {
 			throw new IllegalArgumentException("reading reader not opened by this index accessor");
 		}
 
@@ -601,7 +603,7 @@ class DefaultIndexAccessor implements IndexAccessor {
 
 		try {
 
-			if (reader != cachedWritingReader) {
+			if (!reader.equals(cachedWritingReader)) {
 				throw new IllegalArgumentException("writing Reader not opened by this index accessor");
 			}
 
@@ -681,8 +683,8 @@ class DefaultIndexAccessor implements IndexAccessor {
 		LOGGER.debug("reopening cached reading reader");
 		IndexReader oldReader = cachedReadingReader;
 		try {
-			cachedReadingReader = cachedReadingReader.reopen();
-			if (oldReader != cachedReadingReader) {
+			cachedReadingReader = IndexReader.openIfChanged(oldReader);
+			if (!oldReader.equals(cachedReadingReader)) {
 				oldReader.close();
 			}
 		} catch (IOException e) {

@@ -147,6 +147,14 @@ public class LuceneSingleIndexLocation extends LuceneIndexLocation implements Ta
 	}
 
 	/**
+	 * Returns the path of the index location.
+	 * @return path of the index location
+	 */
+	public final String getIndexLocation() {
+		return this.indexLocation;
+	}
+
+	/**
 	 * Creates the reopen file to make portlet reload the index.
 	 */
 	@Override
@@ -159,7 +167,7 @@ public class LuceneSingleIndexLocation extends LuceneIndexLocation implements Ta
 				File reopenFile = new File(filename);
 				FileUtils.touch(reopenFile);
 			} catch (IOException e) {
-				log.warn("Cannot create reopen file! " + e);
+				log.error("Cannot create reopen file! " + e);
 			}
 		}
 	}
@@ -231,27 +239,6 @@ public class LuceneSingleIndexLocation extends LuceneIndexLocation implements Ta
 		}
 	}
 
-	/**
-	 * Checks if the index is optimized.
-	 * @return true if it is optimized
-	 */
-	@Override
-	public final boolean isOptimized() {
-		boolean ret = false;
-		IndexAccessor indexAccessor = this.getAccessor();
-		IndexReader reader = null;
-		try {
-			reader = indexAccessor.getReader(false);
-			ret = reader.isOptimized();
-		} catch (IOException ex) {
-			log.error("IOException happened during test of index. ", ex);
-		} finally {
-			indexAccessor.release(reader, false);
-		}
-
-		return ret;
-	}
-
 	@Override
 	public final boolean isLocked() {
 		boolean locked = false;
@@ -269,7 +256,7 @@ public class LuceneSingleIndexLocation extends LuceneIndexLocation implements Ta
 	}
 
 	/**
-	 * creates the location for the taxonomy from the config
+	 * creates the location for the taxonomy from the config.
 	 *  
 	 * @param config
 	 * @return
@@ -280,7 +267,7 @@ public class LuceneSingleIndexLocation extends LuceneIndexLocation implements Ta
 	}
 
 	/**
-	 * retrieves the Taxonomy location from the config
+	 * retrieves the Taxonomy location from the config.
 	 * 
 	 * @param config
 	 * @return
@@ -291,7 +278,7 @@ public class LuceneSingleIndexLocation extends LuceneIndexLocation implements Ta
 	}
 
 	/**
-	 * checks if facets are activated
+	 * checks if facets are activated.
 	 * 
 	 * @return
 	 */

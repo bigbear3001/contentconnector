@@ -14,6 +14,8 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.Vector;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import org.apache.log4j.Logger;
 
@@ -126,7 +128,7 @@ public class CRResolvableBean extends AccessibleBean implements Serializable, Re
 	public CRResolvableBean() {
 		this.contentid = "10001";
 	}
-	
+
 	/**
 	 * Create a new instance of CRResolvableBean.
 	 * A contentid 10001.<id> will be generated for the bean.
@@ -147,7 +149,7 @@ public class CRResolvableBean extends AccessibleBean implements Serializable, Re
 	public CRResolvableBean(final String id) {
 		this.contentid = id;
 		int pos = contentid.indexOf('.');
-		if(pos != -1) {
+		if (pos != -1) {
 			obj_id = contentid.substring(pos + 1);
 			obj_type = contentid.substring(0, pos);
 		}
@@ -233,9 +235,7 @@ public class CRResolvableBean extends AccessibleBean implements Serializable, Re
 					try {
 						// THE FOLLOWING CALL DOES NOT THROW AN EXCEPTION
 						// WHEN THE DB CONNECTION IS LOST
-						Object o = inspectResolvableAttribute(PropertyResolver.resolve(
-							givenResolvable,
-							cleanedAttributeNames[i]));
+						Object o = inspectResolvableAttribute(PropertyResolver.resolve(givenResolvable, cleanedAttributeNames[i]));
 						if (o != null) {
 							this.attrMap.put(cleanedAttributeNames[i], o);
 						}
@@ -504,7 +504,7 @@ public class CRResolvableBean extends AccessibleBean implements Serializable, Re
 	 * @return value of attribute or null if value is not set
 	 */
 	public Object get(final String attribute) {
-		if(attribute == null) {
+		if (attribute == null) {
 			return null;
 		} else if ("contentid".equalsIgnoreCase(attribute)) {
 			return this.getContentid();
@@ -515,14 +515,13 @@ public class CRResolvableBean extends AccessibleBean implements Serializable, Re
 		} else if (this.attrMap != null && this.attrMap.containsKey(attribute)) {
 			return this.attrMap.get(attribute);
 		} else if (this.resolvable != null) {
-			// if we are returning an attribute from an resolvable we must
-			// inspect it
+			// if we are returning an attribute from an resolvable we must inspect it
 			// for containing not serializable Objects
 			return inspectResolvableAttribute(this.resolvable.get(attribute));
 		} else {
 			return null;
 		}
-		
+
 	}
 
 	/**
@@ -608,4 +607,58 @@ public class CRResolvableBean extends AccessibleBean implements Serializable, Re
 	public String toString() {
 		return this.getContentid();
 	}
+
+	/**
+	 * Format the bean to return the "contentid".
+	 * This method should return the same thing as toString().
+	 * @return formatted string.
+	 */
+	public String format() {
+		return format("contentid", "%(contentid)");
+	}
+
+	/**
+	 * Format the bean to a string with the specified formatString.
+	 * @param formatString used for formatting the string
+	 * @return formatted string.
+	 */
+	public String format(final String formatString) {
+		return format("contentid", formatString);
+	}
+
+	/**
+	 * Format the bean to a string with the specified idAttribute.
+	 * Setting the idAttribute could be useful if something else as the "contentid" is the primary id.
+	 * Syntax: some text %(fieldname) %(fieldname2)
+	 * Example: Indexing bean: %(idAttribute) using contentid: %(contentid) - %(pub_dir)%(filename)
+	 * @param idAttribute name of the field to be used for retrieving the primary id.
+	 * @param formatString string where the bean information should be replaced (see syntax).
+	 * @return formatted string.
+	 */
+	public String format(final String idAttribute, String formatString) {
+		String resolvedString = formatString;
+
+		Matcher matcher = Pattern.compile("%\\(\\w+\\)").matcher(formatString);
+		ArrayList<String> replacements = new ArrayList<String>();
+		while (matcher.find()) {
+			String key = matcher.group(0);
+			replacements.add(key);
+		}
+		for (String key : replacements) {
+			key = key.replaceAll("[()%]", "");
+			String value = "";
+			if (key.equals("idAttribute")) {
+				value = getString(idAttribute);
+			} else {
+				value = getString(key);
+			}
+			if (value == null) {
+				value = "null";
+			}
+
+			resolvedString = resolvedString.replace("%(" + key + ")", value);
+		}
+		return resolvedString;
+	}
+
 }

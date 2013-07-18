@@ -2,7 +2,7 @@
 	<modelVersion>4.0.0</modelVersion>
 	<groupId>com.gentics</groupId>
 	<artifactId>contentconnector</artifactId>
-	<version>1.12.7.4-SNAPSHOT</version>
+	<version>1.12.7.12-SNAPSHOT</version>
 	<packaging>pom</packaging>
 	<name>contentconnector</name>
 	<properties>
@@ -15,8 +15,8 @@
 		<connection>scm:git:git@github.com:gtxcontentconnector/contentconnector.git</connection>
 		<developerConnection>${alternativeDeveloperConnection}</developerConnection>
 		<url>https://github.com/gtxcontentconnector/contentconnector</url>
-		<tag>1.12.6.1</tag>
-	</scm>
+	  <tag>HEAD</tag>
+  </scm>
 	<build>
 		<plugins>
 			<plugin>
@@ -76,16 +76,4 @@
 			</snapshots>
 		</repository>
 	</repositories>
-	<distributionManagement>
-		<repository>
-			<id>archiva.com.gentics.public</id>
-			<name>Gentics Public Repository</name>
-			<url>http://archiva.gentics.com:8081/archiva/repository/com.gentics.public</url>
-		</repository>
-		<snapshotRepository>
-			<id>archiva.com.gentics.public_snapshots</id>
-			<name>Gentics Public Snapshots Repository</name>
-			<url>http://archiva.gentics.com:8081/archiva/repository/com.gentics.public_snapshots</url>
-		</snapshotRepository>
-	</distributionManagement>
 </project>

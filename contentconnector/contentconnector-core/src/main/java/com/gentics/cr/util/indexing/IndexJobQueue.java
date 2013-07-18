@@ -1,11 +1,18 @@
 package com.gentics.cr.util.indexing;
 
 import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.LinkedBlockingQueue;
 
+import org.apache.commons.lang.StringUtils;
 import org.apache.log4j.Logger;
 
 import com.gentics.cr.CRConfig;
+import com.gentics.cr.configuration.GenericConfiguration;
+import com.gentics.cr.events.AbstractIndexNameAwareEventReceiver;
+import com.gentics.cr.events.EventManager;
+import com.gentics.cr.events.JobQueueFinishedEvent;
 
 /**
  * JobQueue worker class.
@@ -45,6 +52,16 @@ public class IndexJobQueue {
 	 * Configuration key to set size of lastjobs array.
 	 */
 	private static final String SIZE_KEY = "LASTJOBS_SIZE";
+
+	/**
+	 * Configuration key to set eventreceivers for {@link JobQueueFinishedEvent}. 
+	 */
+	private static final String JOBQUEUEFINISHEDEVENTRECEIVERS_KEY = "jobqueuefinishedeventreceiver";
+
+	/**
+	 * The eventreceivers' class. Must implement {@link AbstractIndexNameAwareEventReceiver}.
+	 */
+	private static final String JOBQUEUEFINISHEDEVENTRECEIVERS_CLASS_KEY = "class";
 
 	/**
 	 * Queue containing the jobs to do. 
@@ -105,12 +122,34 @@ public class IndexJobQueue {
 		interval = config.getInteger(INTERVAL_KEY, interval);
 		lastJobsSize = config.getInteger(SIZE_KEY, lastJobsSize);
 		hideEmptyJobs = config.getBoolean(HIDE_EMPTY_JOBS_KEY, hideEmptyJobs);
+		GenericConfiguration jobQueueFinishedEventReceivers = (GenericConfiguration) config.get(JOBQUEUEFINISHEDEVENTRECEIVERS_KEY);
+		if (jobQueueFinishedEventReceivers != null) {
+			Map<String, GenericConfiguration> locationmap = jobQueueFinishedEventReceivers.getSortedSubconfigs();
+			if (locationmap != null) {
+				for (GenericConfiguration locconf : locationmap.values()) {
+					String className = locconf.getString(JOBQUEUEFINISHEDEVENTRECEIVERS_CLASS_KEY);
+					if (!StringUtils.isEmpty(className)) {
+						LOGGER.debug("Register JobQueueFinishedEventReceiver for " + config.getName() + ": " + className);
+						try {
+							@SuppressWarnings("unchecked")
+							Class<? extends AbstractIndexNameAwareEventReceiver> receiverClass = (Class<? extends AbstractIndexNameAwareEventReceiver>) Class
+									.forName(className);
+							AbstractIndexNameAwareEventReceiver receiver = receiverClass.newInstance();
+							receiver.setIndexName(config.getName());
+							EventManager.getInstance().register(receiver);
+						} catch (Exception e) {
+							LOGGER.error("Can not instantiate class " + className);
+						}
+					}
+				}
+			}
+		}
 
 		queue = new LinkedBlockingQueue<AbstractUpdateCheckerJob>();
 		lastJobs = new ArrayList<AbstractUpdateCheckerJob>(lastJobsSize);
 		indexJobQueueWorkerDaemon = new Thread(new Runnable() {
 			public void run() {
-				workQueue();
+				workQueue(config);
 			}
 		});
 		indexJobQueueWorkerDaemon.setName("IndexJobQueueWorker-" + config.getName());
@@ -160,9 +199,9 @@ public class IndexJobQueue {
 	}
 
 	/**
-	 * Check the queue for new jobs each <interval> seconds.
+	 * Check the queue for new jobs each <code>interval</code> seconds.
 	 */
-	private void workQueue() {
+	private void workQueue(final CRConfig config) {
 		boolean interrupted = false;
 
 		while (!interrupted && !stop) {
@@ -172,10 +211,10 @@ public class IndexJobQueue {
 						this.pauseMonitor.wait();
 					}
 				}
-				AbstractUpdateCheckerJob j = this.queue.poll();
-				if (j != null) {
-					LOGGER.debug("Starting Job - " + j.getIdentifyer());
-					synchronized (IndexJobQueue.this) {
+				synchronized (IndexJobQueue.this) {
+					AbstractUpdateCheckerJob j = this.queue.poll();
+					if (j != null) {
+						LOGGER.debug("Starting Job - " + j.getIdentifyer());
 						currentJI = j;
 						currentJob = new Thread(j);
 						currentJob.setName("Current Index Job - " + j.getIdentifyer());
@@ -187,8 +226,12 @@ public class IndexJobQueue {
 						addToLastJobs(j);
 						currentJob = null;
 						currentJI = null;
+						if (queue.isEmpty()) {
+							LOGGER.debug("Sending JobQueueFinishedEvent");
+							EventManager.getInstance().fireEvent(new JobQueueFinishedEvent(j.getIdentifyer()));
+						}
+						LOGGER.debug("Finished Job - " + j.getIdentifyer());
 					}
-					LOGGER.debug("Finished Job - " + j.getIdentifyer());
 				}
 				// Wait for next cycle
 				if (!Thread.currentThread().isInterrupted()) {
@@ -296,9 +339,30 @@ public class IndexJobQueue {
 	 */
 	public final boolean addJob(final AbstractUpdateCheckerJob job) {
 		if (!queue.contains(job)) {
-			return queue.offer(job);
+			synchronized (IndexJobQueue.this) {
+				return queue.offer(job);
+			}
 		}
 		return false;
+	}
+
+	/**
+	 * Adds a list of CRIndexJobs to the job queue.
+	 * @param jobList list of jobs
+	 * @return <code>true</code> if all jobs were added, otherwhise it returns
+	 * <code>false</code>
+	 */
+	public final boolean addJobs(final List<AbstractUpdateCheckerJob> jobList) {
+		if (jobList == null || jobList.isEmpty()) {
+			return false;
+		}
+		boolean result = true;
+		synchronized (IndexJobQueue.this) {
+			for (AbstractUpdateCheckerJob job : jobList) {
+				result &= addJob(job);
+			}
+		}
+		return result;
 	}
 
 	/**

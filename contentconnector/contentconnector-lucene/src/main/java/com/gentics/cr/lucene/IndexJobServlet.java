@@ -1,31 +1,33 @@
 package com.gentics.cr.lucene;
 
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.Date;
 import java.util.HashMap;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.Map.Entry;
+import java.util.concurrent.ConcurrentHashMap;
 
 import javax.servlet.ServletConfig;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import org.apache.commons.io.IOUtils;
 import org.apache.log4j.Logger;
 
 import com.gentics.cr.CRConfigUtil;
-import com.gentics.cr.lucene.indexer.index.LockedIndexException;
+import com.gentics.cr.lucene.indexer.compress.IndexCompressor;
 import com.gentics.cr.lucene.indexer.index.LuceneIndexLocation;
 import com.gentics.cr.lucene.indexer.index.LuceneSingleIndexLocation;
 import com.gentics.cr.lucene.information.SpecialDirectoryRegistry;
 import com.gentics.cr.monitoring.MonitorFactory;
 import com.gentics.cr.servlet.VelocityServlet;
-import com.gentics.cr.util.file.ArchiverUtil;
 import com.gentics.cr.util.indexing.IndexController;
+import com.gentics.cr.util.indexing.IndexExtension;
 import com.gentics.cr.util.indexing.IndexJobQueue;
 import com.gentics.cr.util.indexing.IndexLocation;
-import com.gentics.cr.util.indexing.IndexExtension;
 
 /**
  * @author Christopher Supnig
@@ -59,7 +61,8 @@ public class IndexJobServlet extends VelocityServlet {
 		}
 	}
 
-	public void doService(HttpServletRequest request, HttpServletResponse response) throws IOException {
+	@Override
+	public void doService(final HttpServletRequest request, final HttpServletResponse response) throws IOException {
 
 		// starttime
 		long s = new Date().getTime();
@@ -68,7 +71,26 @@ public class IndexJobServlet extends VelocityServlet {
 		String action = getAction(request);
 		String index = request.getParameter("idx");
 		if ("download".equals(action)) {
-			generateArchive(index, response);
+			IndexLocation location = indexer.getIndexes().get(index);
+			if (location instanceof LuceneSingleIndexLocation) {
+				// set metainformation to response
+				response.setContentType("application/x-compressed, application/x-tar");
+				response.setHeader("Content-Disposition", "attachment; filename=" + index + ".tar.gz");
+
+				// locate the compressed index
+				LuceneSingleIndexLocation indexLocation = (LuceneSingleIndexLocation) location;
+				File compressedIndexDirectory = new File(indexLocation.getReopenFilename()).getParentFile().getParentFile();
+				File compressedIndexFile = new File(new StringBuilder(compressedIndexDirectory.getAbsolutePath()).append("/").append(index)
+						.append(".tar.gz").toString());
+				if (!compressedIndexFile.exists()) {
+					// compress index if it's not present
+					IndexCompressor indexCompressor = new IndexCompressor();
+					indexCompressor.compress(index);
+				}
+				// load the compressed index
+				InputStream compressedIndex = new FileInputStream(compressedIndexFile);
+				IOUtils.copy(compressedIndex, response.getOutputStream());
+			}
 			skipRenderingVelocity();
 		} else {
 			response.setContentType("text/html");
@@ -87,11 +109,8 @@ public class IndexJobServlet extends VelocityServlet {
 					if ("startWorker".equalsIgnoreCase(action)) {
 						queue.resumeWorker();
 					}
-					if ("clear".equalsIgnoreCase(action)) {
-						loc.createClearJob();
-					}
-					if ("optimize".equalsIgnoreCase(action)) {
-						loc.createOptimizeJob();
+					if ("reindex".equalsIgnoreCase(action)) {
+						loc.createReindexJob();
 					}
 					if ("addJob".equalsIgnoreCase(action)) {
 						String cr = request.getParameter("cr");
@@ -124,54 +143,6 @@ public class IndexJobServlet extends VelocityServlet {
 		// endtime
 		long e = new Date().getTime();
 		LOGGER.info("Executiontime for getting " + action + " " + (e - s));
-	}
-
-	/**
-	 * Create an archive of the index.
-	 * @param index Index to create a tarball of.
-	 * @param response 
-	 */
-	private void generateArchive(final String index, final HttpServletResponse response) {
-		IndexLocation location = indexer.getIndexes().get(index);
-		if (location instanceof LuceneSingleIndexLocation) {
-			LuceneSingleIndexLocation indexLocation = (LuceneSingleIndexLocation) location;
-			File indexDirectory = new File(indexLocation.getReopenFilename()).getParentFile();
-			File writeLock = null;
-			boolean weWroteTheWriteLock = false;
-			try {
-				indexLocation.checkLock();
-				if (indexDirectory.canWrite()) {
-					writeLock = new File(indexDirectory, "write.lock");
-					if (writeLock.createNewFile()) {
-						weWroteTheWriteLock = true;
-					} else {
-						throw new LockedIndexException(
-								new Exception("the write lock file already exists in the index."));
-					}
-					//set to read only so the index jobs will not delete it.
-					writeLock.setReadOnly();
-					response.setContentType("application/x-compressed, application/x-tar");
-					response.setHeader("Content-Disposition", "attachment; filename=" + index + ".tar.gz");
-					ArchiverUtil.generateGZippedTar(response.getOutputStream(), indexDirectory);
-				} else {
-					LOGGER.error("Cannot lock the index directory to ensure the consistency of the archive.");
-				}
-			} catch (IOException e) {
-				response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
-				LOGGER.error("Cannot generate the archive correctly.", e);
-			} catch (LockedIndexException e) {
-				response.setStatus(HttpServletResponse.SC_FORBIDDEN);
-				LOGGER.error("Cannot generate the archive while the index is locked.", e);
-			} finally {
-				if (writeLock != null && writeLock.exists() && weWroteTheWriteLock) {
-					writeLock.delete();
-				}
-			}
-
-		} else {
-			LOGGER.error("generating an archive for " + location + " not supported yet.");
-		}
-
 	}
 
 	/**
