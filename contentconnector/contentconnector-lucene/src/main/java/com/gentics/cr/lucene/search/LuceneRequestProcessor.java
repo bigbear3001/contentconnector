@@ -4,11 +4,11 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Vector;
 import java.util.Map.Entry;
+import java.util.Vector;
+import java.util.concurrent.ConcurrentHashMap;
 
 import org.apache.log4j.Logger;
 import org.apache.lucene.analysis.Analyzer;
@@ -23,6 +23,7 @@ import org.apache.lucene.search.BooleanQuery;
 import org.apache.lucene.search.Query;
 import org.apache.lucene.search.TermQuery;
 
+import com.gentics.api.lib.etc.ObjectTransformer;
 import com.gentics.cr.CRConfig;
 import com.gentics.cr.CRError;
 import com.gentics.cr.CRRequest;
@@ -35,7 +36,6 @@ import com.gentics.cr.lucene.indexer.index.LuceneAnalyzerFactory;
 import com.gentics.cr.lucene.indexer.index.LuceneIndexLocation;
 import com.gentics.cr.lucene.search.highlight.AdvancedContentHighlighter;
 import com.gentics.cr.lucene.search.highlight.ContentHighlighter;
-import com.gentics.cr.lucene.search.highlight.WhitespaceVectorBolder;
 import com.gentics.cr.lucene.search.query.CRQueryParserFactory;
 import com.gentics.cr.monitoring.MonitorFactory;
 import com.gentics.cr.monitoring.UseCase;
@@ -177,6 +177,14 @@ public class LuceneRequestProcessor extends RequestProcessor {
 		getStoredAttributes = Boolean.parseBoolean((String) config.get(GET_STORED_ATTRIBUTE_KEY));
 		highlighters = ContentHighlighter.getTransformerTable(config);
 		showParsedQuery = Boolean.parseBoolean((String) this.config.get(SHOW_PARSED_QUERY_KEY));
+	}
+	
+	/**
+	 * Get cr searcher.
+	 * @return
+	 */
+	public CRSearcher getCRSearcher() {
+		return searcher;
 	}
 
 	/**
@@ -327,7 +335,7 @@ public class LuceneRequestProcessor extends RequestProcessor {
 			+ ")#processSearch.Metaresolvables");
 
 		Object metaKey = request.get(META_RESOLVABLE_KEY);
-		if (metaKey != null && (Boolean) metaKey) {
+		if (ObjectTransformer.getBoolean(metaKey, false)) {
 			final CRResolvableBean metaBean;
 			if (showParsedQuery) {
 				metaBean = new CRMetaResolvableBean(searchResult, request, parsedQuery, start, count);

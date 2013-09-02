@@ -322,7 +322,7 @@ class DefaultIndexAccessor implements IndexAccessor {
 	 * @throws IOException
 	 */
 	@Override
-	public Searcher getPrioritizedSearcher() throws IOException {
+	public IndexSearcher getPrioritizedSearcher() throws IOException {
 		boolean reopened = this.numReopening > 0;
 		IndexSearcher searcher = (IndexSearcher) getSearcher();
 
@@ -353,7 +353,7 @@ class DefaultIndexAccessor implements IndexAccessor {
 	 * @see com.mhs.indexaccessor.IndexAccessor#getSearcher()
 	 */
 	@Override
-	public Searcher getSearcher() throws IOException {
+	public IndexSearcher getSearcher() throws IOException {
 		return getSearcher(Similarity.getDefault(), null);
 	}
 
@@ -362,7 +362,7 @@ class DefaultIndexAccessor implements IndexAccessor {
 	 * @see com.mhs.indexaccessor.IndexAccessor#getSearcher(org.apache.lucene.index.IndexReader)
 	 */
 	@Override
-	public Searcher getSearcher(final IndexReader indexReader) throws IOException {
+	public IndexSearcher getSearcher(final IndexReader indexReader) throws IOException {
 		return getSearcher(Similarity.getDefault(), indexReader);
 	}
 
@@ -371,7 +371,7 @@ class DefaultIndexAccessor implements IndexAccessor {
 	 * @see com.mhs.indexaccessor.IndexAccessor#getSearcher(org.apache.lucene.search.Similarity, org.apache.lucene.index.IndexReader)
 	 */
 	@Override
-	public synchronized Searcher getSearcher(final Similarity similarity, final IndexReader indexReader) throws IOException {
+	public synchronized IndexSearcher getSearcher(final Similarity similarity, final IndexReader indexReader) throws IOException {
 
 		checkClosed();
 
@@ -579,7 +579,7 @@ class DefaultIndexAccessor implements IndexAccessor {
 	 * @see com.mhs.indexaccessor.IndexAccessor#release(org.apache.lucene.search.Searcher)
 	 */
 	@Override
-	public synchronized void release(final Searcher searcher) {
+	public synchronized void release(final IndexSearcher searcher) {
 		searcherUseCount--;
 		if (searcherUseCount == 0 && closeAllReleasedSearchers) {
 			closeCachedSearchers();
