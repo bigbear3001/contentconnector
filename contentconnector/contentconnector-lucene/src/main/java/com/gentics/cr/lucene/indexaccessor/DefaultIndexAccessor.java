@@ -363,6 +363,10 @@ class DefaultIndexAccessor implements IndexAccessor {
 	public IndexSearcher getSearcher(final IndexReader indexReader) throws IOException {
 		return getSearcher(Similarity.getDefault(), indexReader);
 	}
+	
+	public IndexSearcher getSearcher(Similarity similarity) throws IOException {
+		return getSearcher(similarity, null);
+	}
 
 	/*
 	 * (non-Javadoc)
